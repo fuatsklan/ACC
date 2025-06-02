@@ -1,0 +1,18 @@
+# macOS metadata
+.DS_Store
+
+# Python: compiled bytecode
+__pycache__/
+*.py[cod]
+
+# PyTorch model checkpoints 
+*.pt
+
+# Plot folders or outputs 
+plots_ddpg/
+plots/
+
+# Virtual‐env folders 
+venv/
+ENV/
+*.egg-info/

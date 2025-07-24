@@ -17,7 +17,8 @@ class DDPGAgent:
                  batch_size=64,
                  buffer_size=int(5e5),
                  device=None,
-                 expl_noise=0.02):
+                 expl_noise=0.02,
+                 learning_starts=10000):
         # Device setup
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -47,6 +48,7 @@ class DDPGAgent:
         self.tau   = tau
         self.batch_size = batch_size
         self.expl_noise = expl_noise
+        self.learning_starts = learning_starts
 
     @torch.no_grad()
     def select_action(self, state: np.ndarray, add_noise=True) -> np.ndarray:
@@ -67,8 +69,8 @@ class DDPGAgent:
         self.replay.add(state, action, reward, next_state, done)
 
     def train_step(self):
-        if self.replay.size < self.batch_size:
-            return  # not enough samples yet
+        if self.replay.size < self.learning_starts:
+            return None, None  # not enough samples yet
 
         # Sample a batch
         s, a, r, s2, d = self.replay.sample(self.batch_size)
@@ -83,12 +85,14 @@ class DDPGAgent:
         critic_loss = F.mse_loss(q, y)
         self.critic_opt.zero_grad()
         critic_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
         self.critic_opt.step()
 
         # 2) Actor update
         actor_loss = -self.critic(s, self.actor(s)).mean()
         self.actor_opt.zero_grad()
         actor_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
         self.actor_opt.step()
 
         # 3) Soft‐update targets (Polyak averaging)
@@ -97,4 +101,6 @@ class DDPGAgent:
                 target.data.mul_(1 - self.tau).add_(self.tau * param.data)
             for param, target in zip(self.critic.parameters(), self.critic_target.parameters()):
                 target.data.mul_(1 - self.tau).add_(self.tau * param.data)
+
+        return actor_loss.item(), critic_loss.item()
 

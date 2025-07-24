@@ -1,8 +1,9 @@
-
 """
-Env creatin for acc
+Continuous-time longitudinal ACC environment, identical dynamics and
+stage-cost to the reference paper.  Includes a deterministic reset_ic()
+so you can start from any fixed initial condition during testing, while
+reset() keeps random ICs for training.
 """
-
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -54,14 +55,7 @@ class ACCEnv(gym.Env):
         self.state, self.prev_a = x_new, a
         self.t_step += 1
         truncated   = self.t_step >= 200                    # 20 s
-
-        # Terminate and penalize if ego passes the lead car
-        terminated = False
-        if x_new[0] < 0:  # e < 0, ego passed the lead car
-            reward = -10.0
-            terminated = True
-
-        return x_new.copy(), reward, terminated, truncated, {}
+        return x_new.copy(), reward, False, truncated, {}
 
     # ---------- random reset (for training) -------------------------------
     def reset(self, seed=None, options=None):

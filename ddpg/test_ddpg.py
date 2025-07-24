@@ -5,6 +5,8 @@ Roll out the trained DDPG policy from the SAME initial condition
 Generates:
     plots_ddpg/ddpg_combined.pdf  (4-panel)
     plots_ddpg/gap_ddpg.png  speed_ddpg.png  u_a_ddpg.png  jerk_ddpg.png
+    so near -6.77 model have proper result tho i should implement evalcall back. Currently its near
+    good result.
 """
 import numpy as np
 import torch
@@ -36,7 +38,7 @@ agent = DDPGAgent(
     buffer_size=int(5e5),
     expl_noise=0.02
 )
-agent.actor.load_state_dict(torch.load("actor_step500000.pt"))
+agent.actor.load_state_dict(torch.load("actor_step950000.pt"))
 agent.actor.eval()
 
 # --- deterministic IC -----------------------------------------------------

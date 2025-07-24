@@ -38,7 +38,7 @@ agent = DDPGAgent(
     buffer_size=int(5e5),
     expl_noise=0.02
 )
-agent.actor.load_state_dict(torch.load("actor_step950000.pt"))
+agent.actor.load_state_dict(torch.load("actor_step900000.pt"))
 agent.actor.eval()
 
 # --- deterministic IC -----------------------------------------------------

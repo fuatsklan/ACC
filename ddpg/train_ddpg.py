@@ -3,6 +3,7 @@ import torch
 from acc_env import ACCEnv
 from ddpg_agent import DDPGAgent
 import time
+import csv
 
 env = ACCEnv()
 state_dim  = env.observation_space.shape[0]
@@ -30,6 +31,24 @@ state, _ = env.reset()
 episode_return = 0.0
 episode_length = 0
 log_interval = 50_000  # print every 50k steps
+eval_interval = 50_000  # evaluate every 50k steps
+csv_file = 'training_log.csv'
+
+def evaluate_policy(agent, env, n_episodes=5):
+    rewards = []
+    for _ in range(n_episodes):
+        state, _ = env.reset()
+        done = False
+        ep_reward = 0.0
+        steps = 0
+        while not done and steps < 200:
+            action = agent.select_action(state, add_noise=False)
+            state, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
+            ep_reward += reward
+            steps += 1
+        rewards.append(ep_reward)
+    return np.mean(rewards)
 
 # --- Logging variables ---
 start_time = time.time()
@@ -38,7 +57,15 @@ actor_loss, critic_loss = None, None
 episode_rewards = []
 episode_lengths = []
 
-def print_log(step):
+# Write CSV header
+with open(csv_file, mode='w', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerow([
+        'timestep', 'eval_mean_reward', 'train_ep_rew_mean', 'train_ep_len_mean',
+        'actor_loss', 'critic_loss', 'n_updates', 'elapsed_time_sec'
+    ])
+
+def print_log(step, eval_reward=None):
     elapsed = time.time() - start_time
     fps = int(step / elapsed) if elapsed > 0 else 0
     ep_len_mean = np.mean(episode_lengths[-10:]) if episode_lengths else 0
@@ -58,6 +85,8 @@ train/             |          |
 |    learning_rate   | {agent.actor_opt.param_groups[0]['lr']:.6f}   |
 |    n_updates       | {n_updates}     |
 """)
+    if eval_reward is not None:
+        print(f"eval/              |          |\n|    mean_reward      | {eval_reward:.2f}   |\n")
 
 for step in range(1, TOTAL_STEPS + 1):
     action = agent.select_action(state)  
@@ -85,5 +114,22 @@ for step in range(1, TOTAL_STEPS + 1):
         print_log(step)
         # Save the actor model
         torch.save(agent.actor.state_dict(), f"actor_step{step}.pt")
+
+    if step % eval_interval == 0:
+        eval_reward = evaluate_policy(agent, env, n_episodes=5)
+        elapsed = time.time() - start_time
+        ep_len_mean = np.mean(episode_lengths[-100:]) if episode_lengths else 0
+        ep_rew_mean = np.mean(episode_rewards[-100:]) if episode_rewards else 0
+        # Print eval log
+        print_log(step, eval_reward=eval_reward)
+        # Append to CSV
+        with open(csv_file, mode='a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                step, eval_reward, ep_rew_mean, ep_len_mean,
+                actor_loss if actor_loss is not None else '',
+                critic_loss if critic_loss is not None else '',
+                n_updates, int(elapsed)
+            ])
 
 

@@ -1,6 +1,4 @@
 
-
-# replay_buffer.py ----------------------------------------------------------
 import torch
 import numpy as np
 

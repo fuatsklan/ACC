@@ -118,8 +118,8 @@ for step in range(1, TOTAL_STEPS + 1):
     if step % eval_interval == 0:
         eval_reward = evaluate_policy(agent, env, n_episodes=5)
         elapsed = time.time() - start_time
-        ep_len_mean = np.mean(episode_lengths[-100:]) if episode_lengths else 0
-        ep_rew_mean = np.mean(episode_rewards[-100:]) if episode_rewards else 0
+        ep_len_mean = np.mean(episode_lengths[-5:]) if episode_lengths else 0
+        ep_rew_mean = np.mean(episode_rewards[-5:]) if episode_rewards else 0
         # Print eval log
         print_log(step, eval_reward=eval_reward)
         # Append to CSV

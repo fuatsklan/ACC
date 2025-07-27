@@ -38,18 +38,27 @@ agent = DDPGAgent(
     buffer_size=int(5e5),
     expl_noise=0.02
 )
-agent.actor.load_state_dict(torch.load("actor_step900000.pt"))
+agent.actor.load_state_dict(torch.load("actor_step750000.pt"))
 agent.actor.eval()
 
 # --- deterministic IC -----------------------------------------------------
 obs, _ = env.reset_ic(e0=5.0, ev0=5.0, a0=0.0)
+print("Initial state after reset_ic:", obs)
 dt, v_lead = env.dt, 5.0
 
 # --- roll-out loop --------------------------------------------------------
 t, e, v, a, u, j = [], [], [], [], [], [0.0]
 prev_a = env.state[2]
 
-for k in range(200):
+# Record initial state before any step
+t.append(0.0)
+e.append(env.state[0])  # gap error
+v.append(v_lead - env.state[1])
+a.append(env.state[2])
+u.append(0.0)  # initial action (no action taken yet)
+j.append(0.0)
+
+for k in range(1, 201):  # start from 1 since t=0 is already recorded
     action = agent.select_action(obs, add_noise=False)
     obs, _, _, done, _ = env.step(action)
 
@@ -74,6 +83,8 @@ v_f = np.array(v)
 a_f = np.array(a)
 u_f = np.array(u)
 j_f = np.array(j[:len(t)])
+
+print("First value in gap array (to be plotted):", gap[0])
 
 # --- plot setup -----------------------------------------------------------
 mpl.rcParams.update({
